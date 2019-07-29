@@ -33,11 +33,6 @@
   :prefix "dotnet-"
   :group 'tools)
 
-(defcustom dotnet-mode-keymap-prefix (kbd "C-c C-n")
-  "Dotnet minor mode keymap prefix."
-  :group 'dotnet
-  :type 'string)
-
 (defcustom dotnet-mode-verbosity-level "normal"
   "Verbosity level used when invoking the dotnet executable.
 Check the documentation of your version of dotnet for valid values. \"diag\" is useful for troubleshooting."
@@ -48,7 +43,7 @@ Check the documentation of your version of dotnet for valid values. \"diag\" is 
 (defvar dotnet-templates '("console" "classlib" "mstest" "xunit" "web" "mvc" "webapi") "List of dotnet project templates supported by this package.")
 ;; Using "" as a default instead of nil.  Then we can call string-suffix-p without ceremony.
 (defvar dotnet-current-target "" "The solution/project on which the next command will operate.")
-(defvar dotnet-command-log-buffer-name "*dotnet commands*" "History of dotnet commands executed")
+(defvar dotnet-command-log-buffer-name "*dotnet commands*" "Buffer with history of dotnet commands executed")
 
 (defvar dotnet-test-last-test-proj nil
   "Last unit test project file executed by `dotnet-test'.")
@@ -66,6 +61,7 @@ Check the documentation of your version of dotnet for valid values. \"diag\" is 
   (when (or current-prefix-arg
             (string= dotnet-current-target ""))
     (setq dotnet-current-target (dotnet--select-project-or-solution)))
+  (update-dotnet-map-prompt)
   dotnet-current-target)
 
 (defun dotnet--current-target-or-prompt-sln-only ()
@@ -75,17 +71,20 @@ With prefix arg prompt anyway."
   (when (or current-prefix-arg
             (string= dotnet-current-target ""))
     (setq dotnet-current-target (dotnet--select-project-or-solution t)))
+  (update-dotnet-map-prompt)
   dotnet-current-target)
 
 (defun dotnet--keep-target-if-project ()
   "Keep current target only if it is a project."
   (unless (string-suffix-p ".csproj" dotnet-current-target)
-    (setq dotnet-current-target "")))
+    (setq dotnet-current-target "")
+    (update-dotnet-map-prompt)))
 
 (defun dotnet--keep-target-if-solution ()
   "Keep current target only if it is a solution."
-p  (unless (string-suffix-p ".sln" dotnet-current-target)
-    (setq dotnet-current-target "")))
+  (unless (string-suffix-p ".sln" dotnet-current-target)
+    (setq dotnet-current-target "")
+    (update-dotnet-map-prompt)))
 
 (defun dotnet--select-project-or-solution (&optional sln-only)
   "Prompt for the project/solution file.  Try projectile root first, else use current buffer's directory.
@@ -226,8 +225,8 @@ language (see `dotnet-langs')."
     (dotnet--log-command cmd-string)
     (async-shell-command cmd-string "*dotnet*")))
 
-(defvar dotnet-mode-command-map
-  (let ((map (make-sparse-keymap)))
+(defvar dotnet-mode-map
+  (let ((map (make-sparse-keymap "")))
     (define-key map (kbd "a p") #'dotnet-add-package)
     (define-key map (kbd "a r") #'dotnet-add-reference)
     (define-key map (kbd "b")   #'dotnet-build)
@@ -243,13 +242,13 @@ language (see `dotnet-langs')."
     (define-key map (kbd "s r") #'dotnet-sln-remove)
     (define-key map (kbd "t")   #'dotnet-test)
     map)
-  "Keymap for dotnet-mode commands after `dotnet-mode-keymap-prefix'.")
-
-(defvar dotnet-mode-map
-  (let ((map (make-sparse-keymap)))
-    (define-key map (kbd dotnet-mode-keymap-prefix) dotnet-mode-command-map)
-    map)
   "Keymap for dotnet-mode.")
+
+(defun update-dotnet-map-prompt ()
+  "Update `dotnet-mode-map' to show `dotnet-current-target' in the prompt."
+  (rplaca (last dotnet-mode-map) (if (string= dotnet-current-target "")
+                                     "Target will be prompted"
+                                   dotnet-current-target)))
 
 ;;;###autoload
 (define-minor-mode dotnet-mode
