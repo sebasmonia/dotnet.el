@@ -225,30 +225,42 @@ language (see `dotnet-langs')."
     (dotnet--log-command cmd-string)
     (async-shell-command cmd-string "*dotnet*")))
 
+
+(defvar dotnet--solution-map
+  (define-prefix-command 'solution nil "Solution "))
+
+(defvar dotnet--add-map
+  (define-prefix-command 'add nil "Add"))
+
 (defvar dotnet-mode-map
-  (let ((map (make-sparse-keymap "")))
-    (define-key map (kbd "a p") #'dotnet-add-package)
-    (define-key map (kbd "a r") #'dotnet-add-reference)
-    (define-key map (kbd "b")   #'dotnet-build)
-    (define-key map (kbd "c")   #'dotnet-clean)
-    (define-key map (kbd "n")   #'dotnet-new)
-    (define-key map (kbd "p")   #'dotnet-publish)
-    (define-key map (kbd "r")   #'dotnet-restore)
-    (define-key map (kbd "e")   #'dotnet-run)
-    (define-key map (kbd "C-e") #'dotnet-run-with-args)
-    (define-key map (kbd "s a") #'dotnet-sln-add)
-    (define-key map (kbd "s l") #'dotnet-sln-list)
-    (define-key map (kbd "s n") #'dotnet-sln-new)
-    (define-key map (kbd "s r") #'dotnet-sln-remove)
-    (define-key map (kbd "t")   #'dotnet-test)
+  (let ((map (make-sparse-keymap "(No target)")))
+    (define-key dotnet--add-map (kbd "p") '("package" . dotnet-add-package))
+    (define-key dotnet--add-map (kbd "r") '("reference" . dotnet-add-project-reference))
+
+    (define-key dotnet--solution-map (kbd "n") '("new" . dotnet-sln-new))
+    (define-key dotnet--solution-map (kbd "r") '("remove" . dotnet-sln-remove))
+    (define-key dotnet--solution-map (kbd "l") '("list" . dotnet-sln-list))
+    (define-key dotnet--solution-map (kbd "a") '("add" . dotnet-sln-add))
+
+    (define-key map (kbd "r")   '("restore" . dotnet-restore))
+    (define-key map (kbd "c")   '("clean" . dotnet-clean))
+    (define-key map (kbd "C-e") '("run w/args" . dotnet-run-with-args))
+    (define-key map (kbd "n")   '("new" . dotnet-new))
+    (define-key map (kbd "s")   `("solution..." . ,dotnet--solution-map))
+    (define-key map (kbd "a")   `("add..." . ,dotnet--add-map))
+    (define-key map (kbd "p")   '("publish" . dotnet-publish))
+    (define-key map (kbd "b")   '("build" . dotnet-build))
+    (define-key map (kbd "e")   '("run" . dotnet-run))
+    (define-key map (kbd "t")   '("test" . dotnet-test))
     map)
   "Keymap for dotnet-mode.")
 
 (defun update-dotnet-map-prompt ()
   "Update `dotnet-mode-map' to show `dotnet-current-target' in the prompt."
-  (rplaca (last dotnet-mode-map) (if (string= dotnet-current-target "")
-                                     "Target will be prompted"
-                                   dotnet-current-target)))
+  (let ((new-prompt (if (string= dotnet-current-target "")
+                        "(No target)"
+                      dotnet-current-target)))
+    (rplaca (last dotnet-mode-map) new-prompt)))
 
 ;;;###autoload
 (define-minor-mode dotnet-mode
