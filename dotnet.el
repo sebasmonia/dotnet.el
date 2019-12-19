@@ -87,16 +87,12 @@ With prefix arg prompt anyway."
     (update-dotnet-map-prompt)))
 
 (defun dotnet--select-project-or-solution (&optional sln-only)
-  "Prompt for the project/solution file.  Try projectile root first, else use current buffer's directory.
+  "Prompt for the project/solution file.  Try project.el root first, else use current buffer's directory.
 When SLN-ONLY allow only solutions."
-  (let ((default-dir-prompt default-directory)
+  (let ((default-dir-prompt (or (cdr (project-current)) default-directory))
         (filter-regex (if sln-only
-                    "\\.sln$"
-                  "\\.csproj$\\|\\.sln$")))
-    (ignore-errors
-      (when (and (fboundp 'projectile-project-root)
-                 (projectile-project-root))
-        (setq default-dir-prompt (projectile-project-root))))
+                          "\\.sln$"
+                        "\\.csproj$\\|\\.sln$")))
     (expand-file-name (completing-read
                        "Project or solution: "
                        (directory-files-recursively default-dir-prompt filter-regex)))))
